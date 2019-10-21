@@ -1,1 +1,0 @@
-/home/grawr/Projects/game_of_life_rust/target/wasm32-unknown-unknown/release/wasm_game_of_life.wasm: /home/grawr/Projects/game_of_life_rust/src/lib.rs /home/grawr/Projects/game_of_life_rust/src/utils.rs
