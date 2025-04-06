@@ -1,5 +1,7 @@
-import { Universe, Cell } from "wasm-game-of-life";
-import { memory } from "wasm-game-of-life/wasm_game_of_life_bg";
+import init, { Universe } from "../pkg/wasm_game_of_life.js";
+
+const wasm = await init();
+const memory = wasm.memory;
 
 const CELL_SIZE = 5;
 const GRID_COLOR = "#CCCCCC";
@@ -14,16 +16,48 @@ const canvas = document.getElementById("game-of-life-canvas");
 canvas.width = (CELL_SIZE + 1) * width + 1;
 canvas.height = (CELL_SIZE + 1) * height + 1;
 
+let isPaused = false;
+let isFrameLocked = true;
+let lastFrameTime = 0;
+let frameCount = 0;
+let lastFpsUpdate = performance.now();
+const fpsDisplay = document.getElementById("fps");
+
+const toggleBtn = document.getElementById("toggle");
+const resetBtn = document.getElementById("reset");
+
 const ctx = canvas.getContext('2d');
 
-const renderLoop = () => {
-    universe.tick();
+// Button handlers
+toggleBtn.addEventListener("click", () => {
+    isPaused = !isPaused;
+    toggleBtn.textContent = isPaused ? "▶️ Resume" : "⏸️ Pause";
+});
 
-    drawGrid();
-    drawCells();
+resetBtn.addEventListener("click", () => {
+    universe.randomize(); // You need to add this to Rust side!
+});
 
+const renderLoop = (timestamp) => {
+    if (!isPaused) {
+        if (timestamp - lastFrameTime >= 1000 / 60) {
+            universe.tick();
+            drawGrid();
+            drawCells();
+            lastFrameTime = timestamp;
+        }
+
+        frameCount++;
+        if (timestamp - lastFpsUpdate >= 1000) {
+            fpsDisplay.textContent = `FPS: ${frameCount}`;
+            frameCount = 0;
+            lastFpsUpdate = timestamp;
+        }
+    }
     requestAnimationFrame(renderLoop);
 };
+
+requestAnimationFrame(renderLoop);
 
 const drawGrid = () => {
     ctx.beginPath();
@@ -54,7 +88,8 @@ const bitIsSet = (n, arr) => {
 
 const drawCells = () => {
     const cellsPtr = universe.cells();
-    const cells = new Uint8Array(memory.buffer, cellsPtr, width * height / 8);
+
+    const cells = new Uint8Array(memory.buffer, cellsPtr, width * height);
 
     ctx.beginPath();
 
@@ -81,3 +116,4 @@ const drawCells = () => {
 drawGrid();
 drawCells();
 requestAnimationFrame(renderLoop);
+

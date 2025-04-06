@@ -1,17 +1,24 @@
 mod utils;
 
+extern crate cfg_if;
+extern crate wasm_bindgen;
 extern crate js_sys;
 extern crate fixedbitset;
 
-use wasm_bindgen::prelude::*;
 use std::fmt;
 use fixedbitset::FixedBitSet;
+use cfg_if::cfg_if;
+use wasm_bindgen::prelude::*;
 
-// When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
-// allocator.
-#[cfg(feature = "wee_alloc")]
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+cfg_if! {
+    // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
+    // allocator.
+    if #[cfg(feature = "wee_alloc")] {
+        extern crate wee_alloc;
+        #[global_allocator]
+        static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+    }
+}
 
 #[wasm_bindgen]
 #[repr(u8)]
@@ -75,6 +82,8 @@ impl Universe {
     }
 
     pub fn new() -> Universe {
+        utils::set_panic_hook();
+        
         let width = 64;
         let height = 64;
 
@@ -83,6 +92,7 @@ impl Universe {
 
         for i in 0..size {
             cells.set(i, js_sys::Math::random() < 0.5)
+            // cells.set(i, true);
         }
       
         Universe {
@@ -106,6 +116,12 @@ impl Universe {
 
     pub fn cells(&self) -> *const u32 {
         self.cells.as_slice().as_ptr()
+    }
+
+    pub fn randomize(&mut self) {
+        for i in 0..self.cells.len() {
+            self.cells.set(i, js_sys::Math::random() < 0.5);
+        }
     }
 }
 
