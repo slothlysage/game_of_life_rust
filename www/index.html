@@ -21,7 +21,11 @@
     <div style="text-align: center; margin-bottom: 1rem;">
       <button id="toggle">▶️ Pause</button>
       <button id="reset">🔄 Reset</button>
-      <span id="fps">FPS: 0</span>
+      <span id="size-display">size: 64</span>
+      <input type="range" id="size-slider" min="3" max="7" value="6">
+      <span id="max-fps-display">max FPS: 60</span>
+      <input type="range" id="fps-slider" min="0" max="60" step="5" value="60">
+      <span id="fps-display">FPS: 60</span>
     </div>
     <canvas id="game-of-life-canvas"></canvas>
     <script src="./bootstrap.js"></script>

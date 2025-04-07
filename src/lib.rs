@@ -81,11 +81,11 @@ impl Universe {
         self.cells = next;
     }
 
-    pub fn new() -> Universe {
+    pub fn new(length: u32) -> Universe {
         utils::set_panic_hook();
         
-        let width = 64;
-        let height = 64;
+        let width = length;
+        let height = length;
 
         let size = (width * height) as usize;
         let mut cells = FixedBitSet::with_capacity(size);
@@ -116,6 +116,12 @@ impl Universe {
 
     pub fn cells(&self) -> *const u32 {
         self.cells.as_slice().as_ptr()
+    }
+
+    pub fn toggle_cell(&mut self, row: u32, column: u32) {
+        let idx = self.get_index(row, column);
+        let current = self.cells[idx];
+        self.cells.set(idx, !current);
     }
 
     pub fn randomize(&mut self) {

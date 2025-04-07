@@ -8,24 +8,62 @@ const CELL_SIZE = 5;
 // const DEAD_COLOR = "#FFFFFF";
 // const ALIVE_COLOR = "#000000";
 
-const universe = Universe.new();
-const width = universe.width();
-const height = universe.height();
+let universe = Universe.new(64);
+let width = universe.width();
+let height = universe.height();
 
-const canvas = document.getElementById("game-of-life-canvas");
+let canvas = document.getElementById("game-of-life-canvas");
 canvas.width = (CELL_SIZE + 1) * width + 1;
 canvas.height = (CELL_SIZE + 1) * height + 1;
 
-const ctx = canvas.getContext('2d');
+let ctx = canvas.getContext('2d');
 
 let isPaused = false;
 let lastFrameTime = 0;
 let frameCount = 0;
+let maxFps = 60;
 let lastFpsUpdate = performance.now();
-const fpsDisplay = document.getElementById("fps");
-
+let size = 64;
+let sizePower = 6;
+const fpsDisplay = document.getElementById("fps-display");
+const maxFpsDisplay = document.getElementById("max-fps-display");
 const toggleBtn = document.getElementById("toggle");
 const resetBtn = document.getElementById("reset");
+const fpsSlider = document.getElementById("fps-slider");
+const sizeSlider = document.getElementById("size-slider");
+const sizeDisplay = document.getElementById("size-display");
+
+let accumulator = 0;
+let timestep = 1000 / maxFps;
+
+const gameLoop = (timestamp) => {
+    if (!lastFrameTime) lastFrameTime = timestamp;
+    const delta = timestamp - lastFrameTime;
+    lastFrameTime = timestamp;
+    accumulator += delta;
+
+    while (accumulator >= timestep) {
+        if (!isPaused) {
+            universe.tick();
+            frameCount++;
+        }
+        accumulator -= timestep;
+    }
+
+    if (!isPaused) {
+        drawCells();
+        drawGrid();
+    }
+
+    if (timestamp - lastFpsUpdate >= 1000) {
+        fpsDisplay.textContent = `FPS: ${frameCount}`;
+        frameCount = 0;
+        lastFpsUpdate = timestamp;
+    }
+
+    requestAnimationFrame(gameLoop)
+}
+
 
 // Button handlers
 toggleBtn.addEventListener("click", () => {
@@ -35,6 +73,45 @@ toggleBtn.addEventListener("click", () => {
 
 resetBtn.addEventListener("click", () => {
     universe.randomize(); // You need to add this to Rust side!
+});
+
+canvas.addEventListener("click", event => {
+    const boundingRect = canvas.getBoundingClientRect();
+
+    const scaleX = canvas.width / boundingRect.width;
+    const scaleY = canvas.height / boundingRect.height;
+
+    const canvasLeft = (event.clientX - boundingRect.left) * scaleX;
+    const canvasTop = (event.clientY - boundingRect.top) * scaleY;
+
+    const row = Math.min(Math.floor(canvasTop / (CELL_SIZE + 1)), height - 1);
+    const col = Math.min(Math.floor(canvasLeft / (CELL_SIZE + 1)), width - 1);
+
+    universe.toggle_cell(row, col);
+
+    drawCells();
+    drawGrid();
+});
+
+fpsSlider.addEventListener("input", () => {
+    maxFps = parseInt(fpsSlider.value);
+    maxFpsDisplay.textContent = `max FPS: ${maxFps}`;
+    timestep = 1000 / maxFps;
+});
+
+sizeSlider.addEventListener("input", () => {
+    sizePower = parseInt(sizeSlider.value);
+    size = 2 ** sizePower
+    sizeDisplay.textContent = `size: ${size}`;
+    universe = Universe.new(size);
+    width = universe.width();
+    height = universe.height();
+
+    canvas = document.getElementById("game-of-life-canvas");
+    canvas.width = (CELL_SIZE + 1) * width + 1;
+    canvas.height = (CELL_SIZE + 1) * height + 1;
+
+    ctx = canvas.getContext('2d');
 });
 
 function randomColorBetween(startRGB, endRGB) {
@@ -51,27 +128,6 @@ function jitterColor(baseRGB, amount = 5) {
     const b = clamp(baseRGB[2] + Math.floor((Math.random() * 2 - 1) * amount));
     return `rgb(${r}, ${g}, ${b})`;
 }
-
-const renderLoop = (timestamp) => {
-    if (!isPaused) {
-        if (timestamp - lastFrameTime >= 1000 / 60) {
-            universe.tick();
-            drawGrid();
-            drawCells();
-            lastFrameTime = timestamp;
-        }
-
-        frameCount++;
-        if (timestamp - lastFpsUpdate >= 1000) {
-            fpsDisplay.textContent = `FPS: ${frameCount}`;
-            frameCount = 0;
-            lastFpsUpdate = timestamp;
-        }
-    }
-    requestAnimationFrame(renderLoop);
-};
-
-requestAnimationFrame(renderLoop);
 
 const drawGrid = () => {
     ctx.beginPath();
@@ -132,5 +188,5 @@ const drawCells = () => {
 
 drawGrid();
 drawCells();
-requestAnimationFrame(renderLoop);
+requestAnimationFrame(gameLoop);
 
